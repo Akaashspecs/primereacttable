@@ -1,5 +1,8 @@
 import { Column } from "primereact/column";
-import { DataTable } from "primereact/datatable";
+import {
+  DataTable,
+  type DataTableSelectionMultipleChangeEvent,
+} from "primereact/datatable";
 import type { OverlayPanel } from "primereact/overlaypanel";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
@@ -40,6 +43,7 @@ const Table: React.FC = () => {
   const [rowClick] = useState(true);
   const openPanel = useRef<OverlayPanel>(null);
   const [selectedRows, setSelectedRows] = useState<number>(0);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -95,6 +99,7 @@ const Table: React.FC = () => {
         }
       } catch (error) {
         console.error("Error fetching table data:", error);
+        setError("Some Technical Error Occured");
         setLoading(false);
       }
     };
@@ -114,13 +119,12 @@ const Table: React.FC = () => {
     }
   };
 
-  const handleSelectedProducts = (e: {
-    value: TableDataType[];
-    originalEvent: { checked: boolean };
-  }) => {
+  const handleSelectedProducts = (
+    e: DataTableSelectionMultipleChangeEvent<TableDataType[]>
+  ) => {
     const id = e.value.map((item) => item.id);
     const rows = localStorage.getItem("selectedRows");
-    if (e.originalEvent.checked === true) {
+    if (e.originalEvent && (e.originalEvent as any).checked === true) {
       if (rows) {
         const parseRow = JSON.parse(rows);
         const requiredId = id.filter((item) => !rows.includes(String(item)));
@@ -131,7 +135,7 @@ const Table: React.FC = () => {
         localStorage.setItem("selectedRows", JSON.stringify(id));
       }
     }
-    if (e.originalEvent.checked === false) {
+    if (e.originalEvent && (e.originalEvent as any).checked === false) {
       if (rows) {
         const selectedIds = tableData.map((item) => item.id);
 
@@ -162,8 +166,20 @@ const Table: React.FC = () => {
     </div>
   );
 
+  if (error && error.length === 0) {
+    return (
+      <div className=" h-screen w-screen text-center flex items-center justify-center text-5xl font-stretch-90%">
+        {error}
+      </div>
+    );
+  }
+
   if (loading && tableData.length === 0) {
-    return <>Loading...</>;
+    return (
+      <div className=" h-screen w-screen text-center flex items-center justify-center text-5xl font-stretch-90%">
+        Loading...
+      </div>
+    );
   }
 
   return (
@@ -183,7 +199,9 @@ const Table: React.FC = () => {
         totalRecords={totalRecords} // 👈 dynamic from API
         loading={loading}
         selection={selectedProducts}
-        onSelectionChange={(e) => handleSelectedProducts(e)}
+        onSelectionChange={(
+          e: DataTableSelectionMultipleChangeEvent<TableDataType[]>
+        ) => handleSelectedProducts(e)}
         dataKey="id"
         showGridlines
         tableStyle={{ minWidth: "50rem" }}
